@@ -1,0 +1,28 @@
+{
+  "name": "create-web3-rn-app",
+  "version": "1.0.0",
+  "description": "React Native + Expo Starter Kit ",
+  "main": "bin/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "create-web3-rn-app": "./bin/index.js"
+  },
+  "type": "module",
+  "keywords": [
+    "web3",
+    "blockchain",
+    "react",
+    "native",
+    "expo"
+  ],
+  "author": "Vivek Suthar",
+  "license": "ISC",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "inquirer": "^9.2.11",
+    "ora": "^7.0.1",
+    "yargs": "^17.7.2"
+  }
+}
