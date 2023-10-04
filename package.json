@@ -10,6 +10,15 @@
     "create-web3-rn-app": "./bin/index.js"
   },
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VIVEK-SUTHAR/create-web3-rn-app"
+  },
+  "author": {
+    "name": "Vivek Suthar",
+    "email": "sutharvivek18@gmail.com",
+    "url": "https://github.com/VIVEK-SUTHAR"
+  },
   "keywords": [
     "web3",
     "blockchain",
@@ -17,7 +26,6 @@
     "native",
     "expo"
   ],
-  "author": "Vivek Suthar",
   "license": "ISC",
   "dependencies": {
     "chalk": "^5.3.0",
