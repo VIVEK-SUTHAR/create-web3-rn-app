@@ -147,11 +147,11 @@ function printInstrctions(appName, isNewArch) {
   if (isNewArch) {
     console.log(
       chalk.white(
-        "You have opted for New Architecture, So Please Download the Custom Expo Go from below Link.\n"
+        "- You have opted for New Architecture, So Please Download the Custom Expo Go from below Link.\n"
       )
     );
     console.log(
-      chalk.blueBright(`Download the Build from ${DEV_BUILDS_DOWNLOAD_URL}\n`)
+      chalk.blueBright(`- Download Link: ${DEV_BUILDS_DOWNLOAD_URL}\n`)
     );
     console.log(
       chalk.white("1. Install the App in Simulator or Physical Device\n")
