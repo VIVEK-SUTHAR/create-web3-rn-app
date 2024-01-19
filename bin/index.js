@@ -18,7 +18,7 @@ const execAsync = promisify(exec);
 const init = () => {
   console.log(chalk.green.bold("Create Web3 React Native + Expo App"));
   console.log(
-    chalk.blue("Bootstrap your your next Web3 Mobile App in seconds")
+    chalk.blue("Bootstrap your your next Web3 Mobile App in seconds :)")
   );
 };
 
@@ -46,14 +46,30 @@ async function createWeb3RnApp() {
         default: false,
       },
     ]);
+    const networks = await inquirer.prompt([
+      {
+        type: "checkbox",
+        choices: [
+          { name: "Ethereum Mainnet", value: "mainnet" },
+          { name: "Ethereum Goerli", value: "goerli" },
+          { name: "Ethereum Sepolia", value: "sepolia" },
+          { name: "Ethereum Holesky", value: "holesky" },
+          { name: "Polygon Mainnet", value: "polygon" },
+          { name: "Polygon Mumbai", value: "polygonMumbai", checked: true },
+          { name: "Polygon zkEVM Testnet", value: "polygonZkEvmTestnet" },
+          { name: "Optimism Goerli", value: "optimismGoerli" },
+          { name: "Optimism Sepolia", value: "optimismSepolia" },
+        ],
+        name: "networks",
+        message: "Select Networks you want to use",
+      },
+    ]);
     const spinner = ora("Creating your Web3 RN + Expo App...\n").start();
 
     const appName = answers.appName;
     const appDesc = answers.appDesc;
     const isNewArch = answers.isNewArch;
-
-    console.log(chalk.blueBright("Settinng up your project..\n"));
-
+    const settingProjectSpinnet = ora("Setting up your project...\n").start();
     if (isNewArch) {
       await execAsync(`git clone ${NEW_ARCH_REPO_URL} ${appName}`);
     } else {
@@ -69,17 +85,22 @@ async function createWeb3RnApp() {
     packageJsonData.name = appName;
 
     fs.writeFileSync(packageJsonPath, JSON.stringify(packageJsonData, null, 2));
-
     upadteDetailsInConstants(appName, appDesc);
     updateAppJson(appName);
-    console.log(chalk.white.bold("Installing dependencies...\n"));
+    setupNetworksInWC(networks);
+    settingProjectSpinnet.succeed("Project setup completed..\n");
+    const installingDependenciesSpinnet = ora(
+      "Installing dependencies...\n"
+    ).start();
+
     await execAsync(isYarnInstalled() ? "yarn" : "npm install");
+    installingDependenciesSpinnet.succeed("Dependencies installed..\n");
     await setUpGit(appName);
     console.log(
       chalk.green.bold("Success! Your Web3 React Native app is ready.\n")
     );
     printInstrctions(appName, isNewArch);
-    spinner.stop();
+    spinner.succeed("Your Web3 RN + Expo App is ready.\n");
   } catch (error) {
     console.error("Error setting up the project", error);
     process.exit(1);
@@ -161,5 +182,44 @@ function printInstrctions(appName, isNewArch) {
       chalk.white(`3. ${isYarnInstalled() ? "yarn start" : "npm run start"} \n`)
     );
     console.log(chalk.white(`4. Scan The QR Code and Start Building... \n`));
+    return;
   }
+  console.log(chalk.white(`1. Run cd ${appName}\n`));
+  console.log(
+    chalk.white(`2. ${isYarnInstalled() ? "yarn start" : "npm run start"} \n`)
+  );
+  console.log(
+    chalk.white(
+      `3. Scan The QR Code with physical device or open simulator and follow instructions... \n`
+    )
+  );
+
+  console.log(chalk.white("Happy Hacking!"));
+}
+
+function setupNetworksInWC(selectedNetworks) {
+  if (selectedNetworks.networks.length === 0) {
+    selectedNetworks.networks = ["polygonMumbai"];
+  }
+  const providersFilePath = "./src/providers/WagmiProvider.tsx";
+  let providersContent = fs.readFileSync(providersFilePath, "utf-8");
+
+  providersContent = providersContent.replace(
+    /const chains = \[.*\];/,
+    `const chains = ${JSON.stringify(selectedNetworks.networks)
+      .replace(/"/g, "")
+      .replace(/'/g, '"')};`
+  );
+  const updatedImports = `import { ${selectedNetworks.networks.join(
+    ","
+  )} } from "viem/chains";`;
+
+  providersContent = providersContent.replace(
+    /import {[^}]*} from "viem\/chains";/,
+    updatedImports
+  );
+
+  fs.writeFileSync(providersFilePath, providersContent);
+
+  console.log("Configuration saved to", providersFilePath);
 }
