@@ -1,6 +1,6 @@
 {
   "name": "create-web3-rn-app",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "React Native + Expo Starter Kit ",
   "main": "bin/index.js",
   "scripts": {
