@@ -1,28 +1,50 @@
 #! /usr/bin/env node
-
 import chalk from "chalk";
 import { exec, execSync } from "child_process";
 import * as fs from "fs";
 import inquirer from "inquirer";
 import ora from "ora";
-import path from "path";
 import { promisify } from "util";
-const OLD_ARCH_REPO_URL = "https://github.com/VIVEK-SUTHAR/cryptoreact.git";
-const NEW_ARCH_REPO_URL =
-  "https://github.com/VIVEK-SUTHAR/cryptoreact-new-architecture.git";
+import {
+  DEV_BUILDS_DOWNLOAD_URL,
+  NEW_ARCH_REPO_URL,
+  OLD_ARCH_REPO_URL,
+  SOLANA_REPO_URL,
+} from "../utils/links.mjs";
 
-const DEV_BUILDS_DOWNLOAD_URL =
-  "https://github.com/VIVEK-SUTHAR/cryptoreact-new-architecture/releases/tag/release";
-const execAsync = promisify(exec);
+
+export  const execAsync = promisify(exec);
 
 const init = () => {
   console.log(chalk.green.bold("Create Web3 React Native + Expo App"));
   console.log(
     chalk.blue("Bootstrap your your next Web3 Mobile App in seconds :)")
   );
+  console.log("\n");
 };
 
 async function createWeb3RnApp() {
+  init();
+  try {
+    const shouldCreateSolApp = await inquirer.prompt([
+      {
+        type: "list",
+        name: "appType",
+        message: "Please select the blockchain on you you want to create?",
+        choices: ["Solana", "Ethereum"],
+      },
+    ]);
+    if (shouldCreateSolApp.appType === "Solana") {
+      await createSolanaDApp();
+    } else {
+      await createEthApp();
+    }
+  } catch (error) {}
+}
+
+createWeb3RnApp();
+
+async function createEthApp() {
   try {
     init();
     const answers = await inquirer.prompt([
@@ -107,7 +129,54 @@ async function createWeb3RnApp() {
   }
 }
 
-createWeb3RnApp();
+async function createSolanaDApp() {
+  try {
+    const answers = await inquirer.prompt([
+      {
+        type: "input",
+        name: "appName",
+        message: "What's your application name ?",
+        default: "mysolanadapp",
+      },
+      {
+        type: "input",
+        name: "appDesc",
+        message: "What describes your app?",
+        default: "my cool web3 mobile app",
+      },
+    ]);
+    const spinner = ora("Creating your Web3 RN + Expo App...\n").start();
+    const appName = answers.appName;
+    const appDesc = answers.appDesc;
+    const settingProjectSpinnet = ora("Setting up your project...\n").start();
+    await execAsync(`git clone ${SOLANA_REPO_URL} ${appName}`);
+
+    process.chdir(appName);
+
+    const packageJsonPath = "./package.json";
+    const packageJsonData = JSON.parse(
+      fs.readFileSync(packageJsonPath, "utf8")
+    );
+
+    packageJsonData.name = appName;
+
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJsonData, null, 2));
+
+    updateAppJson(appName, true);
+    updateSettingsGradleSync(appName);
+    updateMainActivitySync(appName);
+    settingProjectSpinnet.succeed("Project setup completed..\n");
+    const installingDependenciesSpinner = ora(
+      "Installing dependencies...\n"
+    ).start();
+
+    await execAsync(isYarnInstalled() ? "yarn" : "npm install");
+    installingDependenciesSpinner.succeed("Dependencies installed..\n");
+    await setUpGit(appName);
+    spinner.succeed("Success! Your Solana Dapp x React Native app is ready.\n");
+    printInstrctionsForBareApp(appName);
+  } catch (error) {}
+}
 
 function upadteDetailsInConstants(appName, appDesc) {
   const constantsIndexPath = "./src/constants/index.ts";
@@ -124,34 +193,20 @@ function upadteDetailsInConstants(appName, appDesc) {
   fs.writeFileSync(constantsIndexPath, constantsIndexContent);
 }
 
-function updateAppJson(appName) {
+function updateAppJson(appName, isBareProject = false) {
   try {
     const appJsonPath = "./app.json";
     const appJsonData = JSON.parse(fs.readFileSync(appJsonPath, "utf8"));
-
-    appJsonData.expo.name = appName;
-    appJsonData.expo.slug = appName.toLowerCase().replace(/\s+/g, "-");
-    appJsonData.expo.scheme = appName.toLowerCase().replace(/\s+/g, "-");
-
+    if (isBareProject) {
+      appJsonData.name = appName;
+      appJsonData.displayName = appName;
+    } else {
+      appJsonData.expo.name = appName;
+      appJsonData.expo.slug = appName.toLowerCase().replace(/\s+/g, "-");
+      appJsonData.expo.scheme = appName.toLowerCase().replace(/\s+/g, "-");
+    }
     fs.writeFileSync(appJsonPath, JSON.stringify(appJsonData, null, 2));
   } catch (error) {}
-}
-
-async function setUpGit(appName) {
-  try {
-    const clonedDirectory = path.join(process.cwd(), appName);
-    const gitDirectory = path.join(clonedDirectory, ".git");
-
-    if (fs.existsSync(gitDirectory)) {
-      fs.rmdirSync(gitDirectory, { recursive: true });
-      console.log("Existing Git history removed.");
-    }
-
-    await execAsync("git init");
-    console.log("Initialized a new Git repository.");
-  } catch (error) {
-    console.log("Error while initailing new repo", error);
-  }
 }
 
 function isYarnInstalled() {
@@ -222,4 +277,72 @@ function setupNetworksInWC(selectedNetworks) {
   fs.writeFileSync(providersFilePath, providersContent);
 
   console.log("Configuration saved to", providersFilePath);
+}
+
+function updateSettingsGradleSync(projectName) {
+  const settingsGradlePath = "./android/settings.gradle";
+
+  try {
+    let data = fs.readFileSync(settingsGradlePath, "utf8");
+
+    const updatedContent = data.replace(
+      /rootProject\.name\s*=\s*'[^']+'/i,
+      `rootProject.name = '${projectName}'`
+    );
+
+    fs.writeFileSync(settingsGradlePath, updatedContent, "utf8");
+  } catch (err) {
+    console.error("Error updating settings.gradle:", err);
+  }
+}
+
+function updateMainActivitySync(projectName) {
+  const mainActivityPath =
+    "./android/app/src/main/java/com/solmwarnapp/MainActivity.java";
+
+  try {
+    let data = fs.readFileSync(mainActivityPath, "utf8");
+
+    const regex =
+      /protected\s+String\s+getMainComponentName\s*\(\s*\)\s*{\s*return\s+"[^"]+"\s*;\s*}/i;
+
+    if (regex.test(data)) {
+      const updatedContent = data.replace(
+        regex,
+        `protected String getMainComponentName() { return "${projectName}"; }`
+      );
+
+      fs.writeFileSync(mainActivityPath, updatedContent, "utf8");
+    } else {
+    }
+  } catch (err) {
+    console.error("Error updating MainActivity.java:", err);
+  }
+}
+
+function printInstrctionsForBareApp(appName) {
+  console.log(chalk.white("To get started, run the following commands:\n"));
+  console.log(chalk.white(`1. Run cd ${appName}\n`));
+  console.log(
+    chalk.white(
+      `2. ${isYarnInstalled() ? "yarn run android" : "npm run android"} \n`
+    )
+  );
+  console.log(chalk.white("Happy Hacking! WAGMI!"));
+}
+
+async function setUpGit(appName) {
+  try {
+    const gitDirectory = `./${appName}/.git`;
+    if (fs.existsSync(gitDirectory)) {
+      fs.rmSync(gitDirectory, { recursive: true, force: true });
+      console.log("Existing Git history removed.");
+    }
+    await execAsync("git init");
+    await execAsync("git add .");
+    await execAsync('git commit -m "Initial commit from Create Web3 RN App"');
+    console.log("Initialized a new Git repository.");
+  } catch (error) {
+    console.log("Error while initailing new repo", error);
+  }
 }
